@@ -1,27 +1,33 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\Auth\RegisteredUserController;
 
-
-
-Route::get('/users', [UserController::class, 'index'])->name('users.index');
-Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-Route::post('/users', [UserController::class, 'store'])->name('users.store');
-Route::post('/post', [UserController::class, 'poststore'])->name('post.store');
-Route::get('/users/{id}', [UserController::class, 'show'])->name('users.show')->where('id', '[0-9]+');
-Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
-Route::put('/users/{id}', [UserController::class, 'update'])->name('users.update');
-Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
-
-Route::fallback(function() {
-    return response()->view('fallback', [], 404);
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+Route::get('/', function () {
+    return view('welcome');
 });
+// users routes
 Route::resource('users', UserController::class);
+
+// Other routes...
 
 Route::resource('posts', PostController::class);
 
-Route::put('/posts/{post}', [PostController::class, 'update'])->name('posts.update');
+Route::middleware(['auth'])->group(function () {
+    Route::resource('posts', PostController::class);
+});
+require __DIR__.'/auth.php';
 
-Route::post('/posts', [PostController::class, 'store'])->name('posts.store');

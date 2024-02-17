@@ -8,24 +8,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Post extends Model
 {
-    use HasFactory;
-    protected $fillable = ['title', 'body', 'user_id', 'enabled', 'published_at'];
-
-    public function user()
-    {
-    return $this->belongsTo(User::class);
-    }
     use SoftDeletes;
-
-    protected $dates = ['deleted_at'];
-
-    protected static function booted()
-{
-    static::creating(function ($post) {
-        if (empty($post->slug)) {
-            $post->slug = 'default-slug-value'; 
-        }
-    });
-}
-
+    use HasFactory;
+    protected $fillable = ['user_id','title',  'body' , 'slug', 'published_at' ];
+    public function user() {
+        return $this->belongsTo(User::class);
+    }
 }

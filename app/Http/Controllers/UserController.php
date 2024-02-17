@@ -1,136 +1,106 @@
 <?php
 
 namespace App\Http\Controllers;
-
-use App\Models\User;
 use Illuminate\Http\Request;
+use App\Models\User;
+use App\Models\Post;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the users.
-     *
-     * @return \Illuminate\Http\Response
-     */
+
     public function index()
     {
-        // Fetch all users from the database
-        $users = User::all();
-        // Pass users to the view
-        return view('users.index', compact('users'));
+        $users = User::withCount('posts')->paginate(10);
+    return view('users.index', compact('users'));
     }
-
-    /**
-     * Show the form for creating a new user.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function create()
     {
-        // Show create user form
         return view('users.create');
     }
 
-    /**
-     * Store a newly created user in the database.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function store(Request $request)
     {
-        // Validate the request data
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Create a new user and save it to the database
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            // Make sure to hash the password
-            'password' => bcrypt($request->password),
-        ]);
+        DB::transaction(function () use ($request) {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email
+            ]);
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+            event(new Registered($user));
+            Auth::login($user);
+            // Increment the post_count for the user
+            $user->increment('post_count');
+        });
 
-        // Redirect to the users index with a success message
-        return redirect()->route('users.index')->with('success', 'User successfully created.');
+        return redirect(url('/users'));
     }
-
-    /**
-     * Display the specified user.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
+    public function show(User $user)
     {
-        // Retrieve the user by id
-        $user = User::findOrFail($id);
-        // Show user details
-        return view('users.show', compact('user'));
+        $posts = Post::select('title', 'id')->where('user_id', $user->id)->get();
+        return view('users.show', ['user' => $user, 'posts' => $posts]);
     }
-
-    /**
-     * Show the form for editing the specified user.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
+    public function edit($userId)
     {
-        // Find the user by id
-        $user = User::findOrFail($id);
-        // Show edit form with user data
-        return view('users.edit', compact('user'));
+        $user = User::findorfail($userId);
+        return view('users.edit', ['user' => $user]);
     }
-
-    /**
-     * Update the specified user in the database.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
+    public function update(Request $request, $userId)
     {
-        // Validate the request data
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,'.$id,
-            // You might not want to require password on update
-            // 'password' => 'sometimes|string|min:8',
+            'name' => 'required',
+            'email' => 'required|email'
         ]);
 
-        // Find the user and update
-        $user = User::findOrFail($id);
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            // Uncomment if you're updating the password
-            // 'password' => bcrypt($request->password),
-        ]);
+        DB::transaction(function () use ($request, $userId) {
+            $user = User::findOrFail($userId);
+            $user->update([
+                'name' => $request->name,
+                'email' => $request->email
+            ]);
+        });
 
-        // Redirect with success message
-        return redirect()->route('users.index')->with('success', 'User successfully updated.');
+        return redirect(url('/users'));
+    }
+    public function destroy($userId)
+    {
+        $user = User::findOrFail($userId);
+
+    // Log messages for debugging
+    logger("Deleting user {$user->id}");
+
+    // Attempt to delete associated posts
+    try {
+        $deletedPostsCount = $user->posts()->delete();
+        logger("Deleted {$deletedPostsCount} posts");
+    } catch (\Exception $e) {
+        logger("Error deleting posts: {$e->getMessage()}");
     }
 
-    /**
-     * Remove the specified user from the database.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        // Find the user and delete
-        $user = User::findOrFail($id);
+    // Attempt to delete the user
+    try {
         $user->delete();
-
-        // Redirect with success message
-        return redirect()->route('users.index')->with('success', 'User successfully deleted.');
+        logger("User deleted successfully");
+    } catch (\Exception $e) {
+        logger("Error deleting user: {$e->getMessage()}");
     }
+
+    return redirect(url('/users'));
+    }
+
 }
-
-

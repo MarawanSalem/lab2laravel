@@ -1,33 +1,40 @@
-@extends('layouts.app')
-
+@extends('layouts.main')
+@section('title', 'Add new post')
 @section('content')
-<div class="row">
-    <div class="col-md-8 offset-md-2">
-        <h2>Create Post</h2>
-        <form action="{{ route('posts.store') }}" method="POST">
-            @csrf
-            <div class="form-group">
-                <label for="title">Title</label>
-                <input type="text" class="form-control" id="title" name="title" required>
-            </div>
-            <div class="form-group">
-                <label for="user_id">Author</label>
-                <select class="form-control" id="user_id" name="user_id">
-                    @foreach($users as $user)
-                    <option value="{{ $user->id }}">{{ $user->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="body">Body</label>
-                <textarea class="form-control" id="body" name="body" rows="3" required></textarea>
-            </div>
-            <div class="form-group form-check">
+
+<div class="container">
+    <h1>Add New Post</h1>
+    <form action="{{ url('/posts') }}" method="post">
+        @csrf
+     
+      
+
+        <div class="mb-3">
+            <label for="title" class="form-label">Title</label>
+            <input type="text" name="title" id="title" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label for="body" class="form-label">Body</label>
+            <textarea name="body" id="body" cols="30" rows="10" class="form-control"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="slug" class="form-label">Slug</label>
+            <input type="text" name="slug" id="slug" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label for="published_at" class="form-label">Publish At</label>
+            <input type="date" name="published_at" id="published_at" class="form-control">
+        </div>
+        <div class="form-group form-check">
                 <input type="checkbox" class="form-check-input" id="enabled" name="enabled">
                 <label class="form-check-label" for="enabled">Enabled</label>
             </div>
-            <button type="submit" class="btn btn-primary">Submit</button>
-        </form>
-    </div>
+
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
 </div>
+
 @endsection
